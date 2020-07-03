@@ -9,8 +9,11 @@ const arweave = Arweave.init({});
 let wallet: JWKInterface;
 let address: string;
 let balance: string;
+let firstAddTags: boolean = true;
 
 $(document).ready(() => {
+  $('.tagName, .tagValue').val('');
+
   $('#browse').on('change', e => {
     if(!wallet) {
       doLogin(e);
@@ -18,6 +21,18 @@ $(document).ready(() => {
     }
 
     deployFiles(e);
+  });
+
+  $('.addTag').on('click', e => {
+    e.preventDefault();
+
+    if(firstAddTags) {
+      firstAddTags = false;
+      $('.tags').find('table').show();
+      return;
+    }
+
+    $('.tags').find('table').append(`<tr><td><input type="text" class="tagName"></td><td><input type="text" class="tagValue"></td></tr>`);
   });
 
   $('.contact').attr('href', `${arweave.api.config.protocol}://${arweave.api.config.host}:${arweave.api.config.port}/CikNeeJibRjrRnDgyxDzH1ji66RoqXR_jkbgfcbI56w/index.html#/inbox/to=BPr7vrFduuQqqVMu_tftxsScTKUq9ke0rx4q5C9ieQU`);
@@ -28,6 +43,16 @@ const deployFiles = (e: any) => {
   const files: File[] = e.target.files;
   console.log(files);
 
+  const tags: {name: string, value: string}[] = [];
+  const $tagVal = $('.tagValue');
+  $('.tagName').each((i, e) => {
+    const tagName = $(e).val().toString().trim();
+    const tagValue = $tagVal.eq(i).val().toString().trim();
+
+    if(tagName.length && tagValue.length) {
+      tags.push({name: tagName, value: tagValue});
+    }
+  });
 
   for(let i = 0, j = files.length; i < j; i++) {
     const file = files[i];
@@ -41,6 +66,11 @@ const deployFiles = (e: any) => {
     const fileReader = new FileReader();
     fileReader.onload = async ev => {
       const tx = await arweave.createTransaction({data: new Uint8Array(<ArrayBuffer>ev.target.result) }, wallet);
+
+      for(let k = 0, l = tags.length; k < l; k++) {
+        tx.addTag(tags[k].name, tags[k].value);
+      }
+
       tx.addTag('Content-Type', file.type);
       tx.addTag('User-Agent', `PermawebDropper/${VERSION}`);
 
@@ -78,6 +108,7 @@ const doLogin = (e: any) => {
     const $dropzone = $('.dropzone');
     $dropzone.find('#pass').hide();
     $dropzone.find('#water').show();
+    $('.tags').show();
     $dropzone.find('h2').text('Drag and drop files here');
     $dropzone.find('a').text('Browse for files');
   };

@@ -23,6 +23,28 @@ html(lang="en")
         h3 or
         a(href="#").browse Browse for wallet
 
+    .container
+      .tags
+        p You can add custom tags to your uploaded files. 
+          br
+          | All files dropped on the box will have this same tags.
+
+        table(style="display: none")
+          thead
+            tr
+              th Tag Name
+              th Tag Value
+          tbody
+            tr
+              td
+                input.tagName(type="text")
+              td
+                input.tagValue(type="text")
+          
+        a.addTag(href="#") Add Tag
+
+      
+
     .container.files-container
 
     footer
