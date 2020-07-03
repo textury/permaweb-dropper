@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+html(lang="en")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1.0")
+    title Permaweb Dropper
+    script(src="scripts/app.ts")
+  body
+    .container
+      h1 Permaweb Dropper
+      p Save your files forever on the 
+        a(href="https://arweave.org", target="_blank") permaweb
+        | . 
+        br
+        | You need to login with your Arweave wallet, don't have one? 
+        a(href="https://www.arweave.org/wallet", target="_blank") Grab yours here.
+
+      .dropzone
+        input#browse(type="file", name="browse" multiple)
+        img#pass(src="images/pass.png", alt="Arweave Wallet")
+        img#water(src="images/water.png", alt="DropZone", style="display: none")
+        h2 Drag and drop your Arweave wallet
+        h3 or
+        a(href="#").browse Browse for wallet
+
+    .container.files-container
+
+    footer
+      | Built with ❤️ by Cedriking
+      br
+      a(href="https://github.com/cedriking/permaweb-dropper", target="_blank") Open Source
+      |  | 
+      a.contact(href="https://arweave.net/CikNeeJibRjrRnDgyxDzH1ji66RoqXR_jkbgfcbI56w/index.html#/inbox/to=BPr7vrFduuQqqVMu_tftxsScTKUq9ke0rx4q5C9ieQU", target="_blank") Contact/Donate
+      
+      div Icons made by 
+        a(href="https://www.flaticon.com/authors/smashicons", title="Smashicons", target="_blank") Smashicons 
+        | from 
+        a(href="https://www.flaticon.com/" title="Flaticon", target="_blank") www.flaticon.com
