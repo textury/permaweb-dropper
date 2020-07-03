@@ -1,4 +1,6 @@
 # Permaweb Dropper
+![Lint Code Base](https://github.com/cedriking/permaweb-dropper/workflows/Lint%20Code%20Base/badge.svg?branch=master)
+
 Permaweb Dropper is a simple webtool that allow users to upload (deploy) files to Arweave's permaweb without having to download `node.js + npm + arweave-deploy` or having to create your own webpage and integrate `arweave-js` and build everything from scratch to only upload a single (or a few) file(s).
 
 ## ✨ Features:
