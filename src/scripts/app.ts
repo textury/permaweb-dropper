@@ -53,7 +53,7 @@ const deployFiles = (e: any) => {
       if(res.status === 200 || res.status === 202) {
         // Success
         $file.addClass('success');
-        $file.find('.status').html(`Deployed: <a href="https://arweave.net/${txid}" target="_blank">${txid}</a>`);
+        $file.find('.status').html(`Deployed: <a href="${arweave.api.config.protocol}://${arweave.api.config.host}:${arweave.api.config.port}/${txid}" target="_blank">${txid}</a>`);
       } else {
         // Fail
         $file.addClass('fail');
