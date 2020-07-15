@@ -11,5 +11,5 @@ Permaweb Dropper is a simple webtool that allow users to upload (deploy) files t
 - It doesn't store your wallet, your browser, nothing that could track you.
 
 Permaweb Dropper (last version) is available on the public gateways:
-- https://arweave.net/KCBiHmcKcbue7p2tVuGgeAt70Z-mDBtvCG5MA0KqL_w/
-- https://perma.online/KCBiHmcKcbue7p2tVuGgeAt70Z-mDBtvCG5MA0KqL_w/
+- https://arweave.net/PXhr5EdWuCgUmSBbuiU587GlBnmde1MdvlPCpIt1NyM
+- https://perma.online/PXhr5EdWuCgUmSBbuiU587GlBnmde1MdvlPCpIt1NyM
