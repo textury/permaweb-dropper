@@ -56,6 +56,7 @@ const deployFiles = (e: any) => {
 
   for(let i = 0, j = files.length; i < j; i++) {
     const file = files[i];
+
     const filename = file.name.replace(/ /g, '') + file.lastModified;
     html += `<div class="file" data-file="${filename}">
       <img src="${(file.type.indexOf('image') === 0? pictureDataUri : fileDataUri)}">
@@ -65,7 +66,22 @@ const deployFiles = (e: any) => {
 
     const fileReader = new FileReader();
     fileReader.onload = async ev => {
-      const tx = await arweave.createTransaction({data: new Uint8Array(<ArrayBuffer>ev.target.result) }, wallet);
+      const $file = $(`.file[data-file="${filename}"]`);
+      const data = new Uint8Array(<ArrayBuffer>ev.target.result);
+
+      if(file.name.endsWith('.json')) {
+        try {
+          const txt = new TextDecoder('utf8');
+          const json = JSON.parse(txt.decode(data));
+          if(json.kty === 'RSA' && json.d && json.e && json.n) {
+            $file.addClass('fail');
+            $file.find('.status').text('Wallet file, rejected.');
+            return;
+          }
+        } catch(e) {}
+      }
+
+      const tx = await arweave.createTransaction({ data }, wallet);
 
       for(let k = 0, l = tags.length; k < l; k++) {
         tx.addTag(tags[k].name, tags[k].value);
@@ -77,8 +93,6 @@ const deployFiles = (e: any) => {
       await arweave.transactions.sign(tx, wallet);
       const txid = tx.id;
       const res = await arweave.transactions.post(tx);
-
-      const $file = $(`.file[data-file="${filename}"]`);
 
       if(res.status === 200 || res.status === 202) {
         // Success
