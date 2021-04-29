@@ -3,7 +3,7 @@ import $ from 'cash-dom';
 import Arweave from 'arweave/web';
 import { JWKInterface } from "arweave/web/lib/wallet";
 
-const VERSION = '0.0.1';
+const VERSION = '1.1.0';
 
 const arweave = Arweave.init({});
 let wallet: JWKInterface;
@@ -61,7 +61,7 @@ const deployFiles = (e: any) => {
     html += `<div class="file" data-file="${filename}">
       <img src="${(file.type.indexOf('image') === 0? pictureDataUri : fileDataUri)}">
       <span class="title">${file.name}</span>
-      <div class="status">Deploying...</div>
+      <div class="status">Deploying (0%) ...</div>
     </div>`;
 
     const fileReader = new FileReader();
@@ -92,9 +92,15 @@ const deployFiles = (e: any) => {
 
       await arweave.transactions.sign(tx, wallet);
       const txid = tx.id;
-      const res = await arweave.transactions.post(tx);
 
-      if(res.status === 200 || res.status === 202) {
+      const uploader = await arweave.transactions.getUploader(tx);
+      while(!uploader.isComplete) {
+        await uploader.uploadChunk();
+        $file.find('.status').text(`Deploying (${uploader.pctComplete}%) ...`);
+      }
+      const status = uploader.lastResponseStatus;
+
+      if(status === 200 || status === 202) {
         // Success
         $file.addClass('success');
         $file.find('.status').html(`Deployed: <a href="${arweave.api.config.protocol}://${arweave.api.config.host}:${arweave.api.config.port}/${txid}" target="_blank">${txid}</a>`);

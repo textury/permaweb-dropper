@@ -100,3 +100,4 @@ ArweaveApps.iml
 # Dist files
 public
 dist
+.parcel-cache
