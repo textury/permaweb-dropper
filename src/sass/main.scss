@@ -1,0 +1,77 @@
+$background: #f1f2f4;
+$card: #fff4f4;
+$text: #4e4e4e;
+$text-light: #858484;
+$btn: #ff8f8f;
+$dropzone: #fff9f9;
+
+@import "fonts";
+
+body {
+  background: $background;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 500;
+  color: $text;
+}
+
+.container-fluid {
+    padding-right: 5rem;
+    padding-left: 5rem;
+}
+.container, .container-fluid {
+    margin-right: auto;
+    margin-left: auto;
+}
+.wrap {
+    box-sizing: border-box;
+    max-width: 900px;
+    margin: 0 auto;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+.hero {
+    margin-top: 40px;
+}
+
+.card {
+    padding: 2% 5%;
+    border-radius: 5px;
+    background: $card;
+}
+
+h1 {
+    font-size: 1.5rem;
+}
+
+.description {
+    color: $text-light;
+    font-size: 0.9rem;
+}
+
+a {
+    color: $btn;
+}
+
+.dropzone {
+    border: 1px dashed $btn;
+    border-radius: 5px;
+    background: $dropzone;
+    position: relative;
+    padding: 10px;
+    text-align: center;
+    height: 100px;
+
+    #browse {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+        z-index: 999;
+    }
+}
