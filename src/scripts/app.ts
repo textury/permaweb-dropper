@@ -1,15 +1,24 @@
-import "../sass/main.sass";
+import "flexboxgrid";
+import "../sass/main.scss";
 import $ from 'cash-dom';
-import Arweave from 'arweave/web';
+import Arweave from 'arweave';
+import PromisePool from '@supercharge/promise-pool';
+import Community from 'community-js';
 import { JWKInterface } from "arweave/web/lib/wallet";
 
 const VERSION = '1.1.0';
 
 const arweave = Arweave.init({});
+let community: Community;
 let wallet: JWKInterface;
 let address: string;
 let balance: string;
 let firstAddTags: boolean = true;
+let toDeploy: File[] = [];
+let tags: {name: string, value: string}[] = [];
+let totalSize = 0;
+let fee = 0;
+let total: string = '0';
 
 $(document).ready(() => {
   $('.tagName, .tagValue').val('');
@@ -20,7 +29,61 @@ $(document).ready(() => {
       return;
     }
 
-    deployFiles(e);
+    addToDeploy(e);
+  });
+
+  $('#deploy').on('click', async e => {
+    e.preventDefault();
+
+    $('#browse').attr('disabled', 'disabled');
+
+    if((+total) > (+balance)) {
+      return alert('You don\'t have enough balance!');
+    }
+
+    tags = [];
+    const $tagVal = $('.tagValue');
+    $('.tagName').each((i, e) => {
+      const tagName = $(e).val().toString().trim();
+      const tagValue = $tagVal.eq(i).val().toString().trim();
+
+      if(tagName.length && tagValue.length) {
+        tags.push({name: tagName, value: tagValue});
+      }
+    });
+
+    const $file = $('.file');
+    const $cardExt = $file.find('.card-ext');
+
+    $file.find('.status').text('Deploying (0%)...');
+    $cardExt.html(ring());
+
+    await community.setCommunityTx('eCwfEQwLFpfsfcIwbSX0l749_fsZvaYWJuSXwwDs64c');
+    const target = await community.selectWeightedHolder();
+
+    console.log(target, address, fee.toString().split('.')[0]);
+
+    if (address !== target) {
+      const tx = await arweave.createTransaction({
+        target,
+        quantity: fee.toString().split('.')[0],
+      });
+      tx.addTag('Action', 'Deploy');
+      tx.addTag('Message', `Deployed ${toDeploy.length} ${toDeploy.length === 1 ? 'file' : 'files'}.`);
+      tx.addTag('Service', `PermawebDropper/${VERSION}`);
+      tx.addTag('App-Name', `PermawebDropper/${VERSION}`);
+
+      await arweave.transactions.sign(tx, wallet);
+      await arweave.transactions.post(tx);
+    }
+
+    await PromisePool.withConcurrency(5).for(toDeploy).process(async file => {
+      await deploy(file);
+      return true;
+    });
+
+    toDeploy = [];
+    $('#browse').removeAttr('disabled');
   });
 
   $('.addTag').on('click', e => {
@@ -28,112 +91,238 @@ $(document).ready(() => {
 
     if(firstAddTags) {
       firstAddTags = false;
-      $('.tags').find('table').show();
+      $('.tags').find('.row').show();
       return;
     }
 
-    $('.tags').find('table').append(`<tr><td><input type="text" class="tagName"></td><td><input type="text" class="tagValue"></td></tr>`);
+    $('.tags').find('.row').append(`
+    <div class="col-xs-6 text-center">
+      <input class="tagName" type="text">
+    </div>
+    <div class="col-xs-6 text-center">
+      <input class="tagValue" type="text">
+    </div>
+    `);
+  });
+
+  $('.files-container').on('click', '.remove', async e => {
+    e.preventDefault();
+
+    for(let i = 0, j = toDeploy.length; i < j; i++) {
+      const file = toDeploy[i];
+      const filename = file.name.replace(/ /g, '') + file.lastModified;
+      
+      const $file = $(e.target).parents('.file').first();
+      if(filename === $file.attr('data-file')) {
+        $file.remove();
+        const f = toDeploy.splice(i, 1);
+        totalSize -= f[0].size;
+        break;
+      }
+    }
+    if(!toDeploy.length) {
+      return $('.card-footer').hide();
+    }
+
+    const {data: winston} = await arweave.api.get(`price/${totalSize}`);
+    fee = (+winston) * 0.1;
+    const ar = arweave.ar.winstonToAr(winston);
+    const arFee = arweave.ar.winstonToAr(fee.toString());
+    const total = arweave.ar.winstonToAr(((+winston) + fee).toString());
+
+    $('.total-files').text(toDeploy.length.toString());
+    $('.total-size').text(bytesForHumans(totalSize));
+    $('.total-cost').text(`${ar} AR`);
+    $('.total-fee').text(`${arFee} AR`);
+    $('.total-cost-with-fee').text(total);
+    $('.balance').text(balance);
+    $('.balance-after').text(((+balance) - (+total)).toString());
   });
 
   $('.contact').attr('href', `${arweave.api.config.protocol}://${arweave.api.config.host}:${arweave.api.config.port}/CikNeeJibRjrRnDgyxDzH1ji66RoqXR_jkbgfcbI56w/index.html#/inbox/to=BPr7vrFduuQqqVMu_tftxsScTKUq9ke0rx4q5C9ieQU`);
 });
 
-const deployFiles = (e: any) => {
+const addToDeploy = async (e: any) => {
   let html = '';
-  const files: File[] = e.target.files;
-  console.log(files);
+  const files: File[] = Array.from(new Set(e.target.files));
 
-  const tags: {name: string, value: string}[] = [];
-  const $tagVal = $('.tagValue');
-  $('.tagName').each((i, e) => {
-    const tagName = $(e).val().toString().trim();
-    const tagValue = $tagVal.eq(i).val().toString().trim();
-
-    if(tagName.length && tagValue.length) {
-      tags.push({name: tagName, value: tagValue});
-    }
-  });
-
-  for(let i = 0, j = files.length; i < j; i++) {
+  for(let i = files.length - 1, j = 0; i >= j; i--) {
     const file = files[i];
-
     const filename = file.name.replace(/ /g, '') + file.lastModified;
-    html += `<div class="file" data-file="${filename}">
-      <img src="${(file.type.indexOf('image') === 0? pictureDataUri : fileDataUri)}">
-      <span class="title">${file.name}</span>
-      <div class="status">Deploying (0%) ...</div>
-    </div>`;
 
-    const fileReader = new FileReader();
-    fileReader.onload = async ev => {
-      const $file = $(`.file[data-file="${filename}"]`);
-      const data = new Uint8Array(<ArrayBuffer>ev.target.result);
-
-      if(file.name.endsWith('.json')) {
-        try {
-          const txt = new TextDecoder('utf8');
-          const json = JSON.parse(txt.decode(data));
-          if(json.kty === 'RSA' && json.d && json.e && json.n) {
-            $file.addClass('fail');
-            $file.find('.status').text('Wallet file, rejected.');
-            return;
-          }
-        } catch(e) {}
-      }
-
-      const tx = await arweave.createTransaction({ data }, wallet);
-
-      for(let k = 0, l = tags.length; k < l; k++) {
-        tx.addTag(tags[k].name, tags[k].value);
-      }
-
-      tx.addTag('Content-Type', file.type);
-      tx.addTag('User-Agent', `PermawebDropper/${VERSION}`);
-
-      await arweave.transactions.sign(tx, wallet);
-      const txid = tx.id;
-
-      const uploader = await arweave.transactions.getUploader(tx);
-      while(!uploader.isComplete) {
-        await uploader.uploadChunk();
-        $file.find('.status').text(`Deploying (${uploader.pctComplete}%) ...`);
-      }
-      const status = uploader.lastResponseStatus;
-
-      if(status === 200 || status === 202) {
-        // Success
-        $file.addClass('success');
-        $file.find('.status').html(`Deployed: <a href="${arweave.api.config.protocol}://${arweave.api.config.host}:${arweave.api.config.port}/${txid}" target="_blank">${txid}</a>`);
-      } else {
-        // Fail
-        $file.addClass('fail');
-        $file.find('.status').text('Transaction failed.');
-        console.log(e);
-      }
+    if($(`[data-file="${filename}"]`).length) {
+      files.splice(i, 1);
+      continue;
     }
-    fileReader.readAsArrayBuffer(file);
+
+    const {data: winston} = await arweave.api.get(`price/${file.size}`);
+    const ar = arweave.ar.winstonToAr(winston, {formatted: true, decimals: 5, trim: true});
+
+    const f = file.name.split('.');
+
+    totalSize += file.size;
+
+    html += `
+    <div class="col-xs-12 col-md-6 file" data-file="${filename}">
+      <div class="card-ext row middle-xs"> 
+        <div class="col-xs">${f.pop()}</div>
+      </div>
+      <div class="title">${f.join('.')}</div>
+      <div class="description status">${bytesForHumans(file.size)} - ${ar} AR<br><a class="remove" href="#">remove</a></div>
+    </div>`;
+    
   }
-  $('.files-container').prepend(html);
+  $('.files-container').append(html);
+
+  toDeploy = [...toDeploy, ...files];
+
+  const {data: winston} = await arweave.api.get(`price/${totalSize}`);
+  fee = (+winston) * 0.1;
+  const ar = arweave.ar.winstonToAr(winston);
+  const arFee = arweave.ar.winstonToAr(fee.toString());
+  total = arweave.ar.winstonToAr(((+winston) + fee).toString());
+
+  $('.total-files').text(toDeploy.length.toString());
+  $('.total-size').text(bytesForHumans(totalSize));
+  $('.total-cost').text(`${ar} AR`);
+  $('.total-fee').text(`${arFee} AR`);
+  $('.total-cost-with-fee').text(total);
+  $('.balance').text(balance);
+  $('.balance-after').text(((+balance) - (+total)).toString());
+  $('.card-footer').show();
 };
 
 const doLogin = (e: any) => {
+  const file = e.target.files[0];
+  if(!file.name.endsWith('.json')) {
+    return alert('Invalid wallet file!');
+  }
+
   const fileReader = new FileReader();
   fileReader.onload = async e => {
-    // @ts-ignore
-    wallet = JSON.parse(e.target.result);
-    address = await arweave.wallets.jwkToAddress(wallet);
-    const bal = await arweave.wallets.getBalance(address);
-    balance = arweave.ar.winstonToAr(bal);
+    try {
+      // @ts-ignore
+      wallet = JSON.parse(e.target.result);
+      address = await arweave.wallets.jwkToAddress(wallet);
+      const bal = await arweave.wallets.getBalance(address);
+      balance = arweave.ar.winstonToAr(bal);
 
-    const $dropzone = $('.dropzone');
-    $dropzone.find('#pass').hide();
-    $dropzone.find('#water').show();
-    $('.tags').show();
-    $dropzone.find('h2').text('Drag and drop files here');
-    $dropzone.find('a').text('Browse for files');
+      community = new Community(arweave, wallet);
+
+      const $dropzone = $('.dropzone');
+      $('.tags').show();
+      $dropzone.find('p').html('Drag and drop files here or <a href="#">browse for files</a>');
+    } catch(e) {
+      console.log(e);
+      alert('Invalid wallet file!');
+    }
   };
   fileReader.readAsText(e.target.files[0]);
 };
 
-const pictureDataUri = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iaXNvLTg4NTktMSI/Pg0KPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDE5LjAuMCwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMCkgIC0tPg0KPHN2ZyB2ZXJzaW9uPSIxLjEiIGlkPSJDYXBhXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgNTggNTgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDU4IDU4OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8Zz4NCgk8cGF0aCBkPSJNNTcsNkgxQzAuNDQ4LDYsMCw2LjQ0NywwLDd2NDRjMCwwLjU1MywwLjQ0OCwxLDEsMWg1NmMwLjU1MiwwLDEtMC40NDcsMS0xVjdDNTgsNi40NDcsNTcuNTUyLDYsNTcsNnogTTU2LDUwSDJWOGg1NFY1MHoiDQoJCS8+DQoJPHBhdGggZD0iTTE2LDI4LjEzOGMzLjA3MSwwLDUuNTY5LTIuNDk4LDUuNTY5LTUuNTY4QzIxLjU2OSwxOS40OTgsMTkuMDcxLDE3LDE2LDE3cy01LjU2OSwyLjQ5OC01LjU2OSw1LjU2OQ0KCQlDMTAuNDMxLDI1LjY0LDEyLjkyOSwyOC4xMzgsMTYsMjguMTM4eiBNMTYsMTljMS45NjgsMCwzLjU2OSwxLjYwMiwzLjU2OSwzLjU2OVMxNy45NjgsMjYuMTM4LDE2LDI2LjEzOHMtMy41NjktMS42MDEtMy41NjktMy41NjgNCgkJUzE0LjAzMiwxOSwxNiwxOXoiLz4NCgk8cGF0aCBkPSJNNyw0NmMwLjIzNCwwLDAuNDctMC4wODIsMC42Ni0wLjI0OWwxNi4zMTMtMTQuMzYybDEwLjMwMiwxMC4zMDFjMC4zOTEsMC4zOTEsMS4wMjMsMC4zOTEsMS40MTQsMHMwLjM5MS0xLjAyMywwLTEuNDE0DQoJCWwtNC44MDctNC44MDdsOS4xODEtMTAuMDU0bDExLjI2MSwxMC4zMjNjMC40MDcsMC4zNzMsMS4wNCwwLjM0NSwxLjQxMy0wLjA2MmMwLjM3My0wLjQwNywwLjM0Ni0xLjA0LTAuMDYyLTEuNDEzbC0xMi0xMQ0KCQljLTAuMTk2LTAuMTc5LTAuNDU3LTAuMjY4LTAuNzItMC4yNjJjLTAuMjY1LDAuMDEyLTAuNTE1LDAuMTI5LTAuNjk0LDAuMzI1bC05Ljc5NCwxMC43MjdsLTQuNzQzLTQuNzQzDQoJCWMtMC4zNzQtMC4zNzMtMC45NzItMC4zOTItMS4zNjgtMC4wNDRMNi4zMzksNDQuMjQ5Yy0wLjQxNSwwLjM2NS0wLjQ1NSwwLjk5Ny0wLjA5LDEuNDEyQzYuNDQ3LDQ1Ljg4Niw2LjcyMyw0Niw3LDQ2eiIvPg0KPC9nPg0KPGc+DQo8L2c+DQo8Zz4NCjwvZz4NCjxnPg0KPC9nPg0KPGc+DQo8L2c+DQo8Zz4NCjwvZz4NCjxnPg0KPC9nPg0KPGc+DQo8L2c+DQo8Zz4NCjwvZz4NCjxnPg0KPC9nPg0KPGc+DQo8L2c+DQo8Zz4NCjwvZz4NCjxnPg0KPC9nPg0KPGc+DQo8L2c+DQo8Zz4NCjwvZz4NCjxnPg0KPC9nPg0KPC9zdmc+DQo=';
-const fileDataUri = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iaXNvLTg4NTktMSI/Pg0KPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDE5LjAuMCwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMCkgIC0tPg0KPHN2ZyB2ZXJzaW9uPSIxLjEiIGlkPSJDYXBhXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB2aWV3Qm94PSIwIDAgNjAgNjAiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDYwIDYwOyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8Zz4NCgk8cGF0aCBkPSJNNDIuNSwyMmgtMjVjLTAuNTUyLDAtMSwwLjQ0Ny0xLDFzMC40NDgsMSwxLDFoMjVjMC41NTIsMCwxLTAuNDQ3LDEtMVM0My4wNTIsMjIsNDIuNSwyMnoiLz4NCgk8cGF0aCBkPSJNMTcuNSwxNmgxMGMwLjU1MiwwLDEtMC40NDcsMS0xcy0wLjQ0OC0xLTEtMWgtMTBjLTAuNTUyLDAtMSwwLjQ0Ny0xLDFTMTYuOTQ4LDE2LDE3LjUsMTZ6Ii8+DQoJPHBhdGggZD0iTTQyLjUsMzBoLTI1Yy0wLjU1MiwwLTEsMC40NDctMSwxczAuNDQ4LDEsMSwxaDI1YzAuNTUyLDAsMS0wLjQ0NywxLTFTNDMuMDUyLDMwLDQyLjUsMzB6Ii8+DQoJPHBhdGggZD0iTTQyLjUsMzhoLTI1Yy0wLjU1MiwwLTEsMC40NDctMSwxczAuNDQ4LDEsMSwxaDI1YzAuNTUyLDAsMS0wLjQ0NywxLTFTNDMuMDUyLDM4LDQyLjUsMzh6Ii8+DQoJPHBhdGggZD0iTTQyLjUsNDZoLTI1Yy0wLjU1MiwwLTEsMC40NDctMSwxczAuNDQ4LDEsMSwxaDI1YzAuNTUyLDAsMS0wLjQ0NywxLTFTNDMuMDUyLDQ2LDQyLjUsNDZ6Ii8+DQoJPHBhdGggZD0iTTM4LjkxNCwwSDYuNXY2MGg0N1YxNC41ODZMMzguOTE0LDB6IE0zOS41LDMuNDE0TDUwLjA4NiwxNEgzOS41VjMuNDE0eiBNOC41LDU4VjJoMjl2MTRoMTR2NDJIOC41eiIvPg0KPC9nPg0KPGc+DQo8L2c+DQo8Zz4NCjwvZz4NCjxnPg0KPC9nPg0KPGc+DQo8L2c+DQo8Zz4NCjwvZz4NCjxnPg0KPC9nPg0KPGc+DQo8L2c+DQo8Zz4NCjwvZz4NCjxnPg0KPC9nPg0KPGc+DQo8L2c+DQo8Zz4NCjwvZz4NCjxnPg0KPC9nPg0KPGc+DQo8L2c+DQo8Zz4NCjwvZz4NCjxnPg0KPC9nPg0KPC9zdmc+DQo=';
+const deploy = async (file: File) => {
+  return new Promise((resolve, reject) => {
+    const filename = file.name.replace(/ /g, '') + file.lastModified;
+
+    const fileReader = new FileReader();
+      fileReader.onload = async ev => {
+        const $file = $(`.file[data-file="${filename}"]`);
+        const data = new Uint8Array(<ArrayBuffer>ev.target.result);
+  
+        if(file.name.endsWith('.json')) {
+          try {
+            const txt = new TextDecoder('utf8');
+            const json = JSON.parse(txt.decode(data));
+            if(json && json.kty === 'RSA' && json.d && json.e && json.n) {
+              $file.addClass('fail');
+              $file.find('.status').text('Wallet file, rejected.');
+              return resolve(false);
+            }
+          } catch(e) {}
+        }
+  
+        const tx = await arweave.createTransaction({ data }, wallet);
+
+        
+        for(let k = 0, l = tags.length; k < l; k++) {
+          tx.addTag(tags[k].name, tags[k].value);
+        }
+  
+        tx.addTag('Content-Type', file.type);
+        tx.addTag('User-Agent', `PermawebDropper/${VERSION}`);
+  
+        await arweave.transactions.sign(tx, wallet);
+        const txid = tx.id;
+
+        const circle = ($file.find('circle').get(0)) as unknown as SVGCircleElement;
+        const radius = circle.r.baseVal.value;
+        const circumference = radius * 2 * Math.PI;
+        circle.style.strokeDasharray = `${circumference} ${circumference}`;
+        circle.style.strokeDashoffset = circumference.toString();
+  
+        const uploader = await arweave.transactions.getUploader(tx);
+        while(!uploader.isComplete) {
+          await uploader.uploadChunk();
+          $file.find('.status').text(`Deploying (${uploader.pctComplete}%) ...`);
+          const offset = circumference - uploader.pctComplete / 100 * circumference;
+          circle.style.strokeDashoffset = offset.toString();
+        }
+        const status = uploader.lastResponseStatus;
+  
+        if(status === 200 || status === 202) {
+          // Success
+          $file.addClass('success');
+          $file.find('.status').html(`Deployed: <a href="${arweave.api.config.protocol}://${arweave.api.config.host}:${arweave.api.config.port}/${txid}" target="_blank">${txid}</a>`);
+          resolve(true);
+        } else {
+          // Fail
+          $file.addClass('fail');
+          $file.find('.status').text('Transaction failed.');
+          resolve(false);
+        }
+      }
+      fileReader.readAsArrayBuffer(file);
+  });
+}
+
+function bytesForHumans(bytes: number): string {
+  const sizes = ['b', 'kb', 'mb', 'gb', 'tb', 'pb', 'eb'];
+
+  let output: string;
+
+  sizes.forEach((unit, id) => {
+    const s = Math.pow(1024, id);
+    let fixed = '';
+    if (bytes >= s) {
+      fixed = String((bytes / s).toFixed(2));
+      if (fixed.indexOf('.0') === fixed.length - 2) {
+        fixed = fixed.slice(0, -2);
+      }
+      output = `${fixed}${unit}`;
+    }
+  });
+
+  if (!output) {
+    return `0 Bytes`;
+  }
+
+  return output;
+}
+
+function ring() {
+  return `
+  <div class="col-xs">
+    <svg class="progress-ring">
+      <circle class="progress-ring__circle" 
+        stroke="white" 
+        stroke-width="4" 
+        fill="transparent" 
+        r="10" 
+        cx="14" 
+        cy="16" 
+        style="stroke-dasharray: 0px 0px; 
+        stroke-dashoffset: 0px;
+      "></circle>
+    </svg>
+  </div>`;
+}

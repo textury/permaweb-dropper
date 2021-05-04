@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+doctype html
 html(lang="en")
   head
     meta(charset="UTF-8")
@@ -6,55 +6,63 @@ html(lang="en")
     title Permaweb Dropper
     script(src="scripts/app.ts")
   body
-    .container
-      h1 Permaweb Dropper
-      p Save your files forever on the 
-        a(href="https://arweave.org", target="_blank") permaweb
-        | . 
-        br
-        | You need to login with your Arweave wallet, don't have one? 
-        a(href="https://www.arweave.org/wallet", target="_blank") Grab yours here.
+    .wrap.container-fluid
+      .hero 
+        .row 
+          .card.col-xs
+            h1 Permaweb Dropper
+            p.description Save your files forever on the 
+              a(href="https://arweave.org", target="_blank") permaweb
+              | . 
+              br
+              | You need to login with your Arweave wallet, don't have one? 
+              a(href="https://www.arweave.org/wallet", target="_blank") Grab yours here.
+              br
+              | Have ArConnect? 
+              a(href="#").arconnect Click here to login
 
-      .dropzone
-        input#browse(type="file", name="browse" multiple)
-        img#pass(src="images/pass.png", alt="Arweave Wallet")
-        img#water(src="images/water.png", alt="DropZone", style="display: none")
-        h2 Drag and drop your Arweave wallet
-        h3 or
-        a(href="#").browse Browse for wallet
+            .row 
+              .col-xs-12
+                .dropzone.row.middle-xs
+                  .col-xs
+                    input#browse(type="file", name="browse" multiple)
+                    p Drag and drop your Arweave wallet or 
+                      a(href="#") browse for wallet
 
-    .container
-      .tags
-        p You can add custom tags to your uploaded files. 
-          br
-          | All files deployed will have these tags.
+            .row 
+              .tags
+                p You can add custom tags to your uploaded files. All files deployed will have these tags.
 
-        table(style="display: none")
-          thead
-            tr
-              th Tag Name
-              th Tag Value
-          tbody
-            tr
-              td
-                input.tagName(type="text")
-              td
-                input.tagValue(type="text")
-          
-        a.addTag(href="#") Add Tag
+                .row(style="display: none")
+                  .col-xs-6.text-center Tag Name
+                  .col-xs-6.text-center Tag Value
+                  .col-xs-6.text-center
+                    input.tagName(type="text")
+                  .col-xs-6.text-center
+                    input.tagValue(type="text")
+                  
+                p.text-center 
+                  a.addTag(href="#") Add Tag
 
-      
+            .row
+              .col-xs-12
+                .row.files-container 
 
-    .container.files-container
+              .card-footer.col-xs-12 
+                .row 
+                  .col-xs-12.description
+                    p Total files: #[span.total-files] | Total size: #[span.total-size]
+                      br
+                      | Cost: #[span.total-cost] + #[span.total-fee] (10% service fee)
+                      br
+                      | Total cost: #[span.total-cost-with-fee] AR
+                    p Balance: #[span.balance] AR
+                      br
+                      | After deploying: #[span.balance-after] AR
+                a#deploy.button(href="#") Upload
+
 
     footer
-      | Built with ❤️ by Cedriking
+      | Built with ❤️ by Textury
       br
-      a(href="https://github.com/cedriking/permaweb-dropper", target="_blank") Open Source
-      |  | 
-      a.contact(href="https://arweave.net/CikNeeJibRjrRnDgyxDzH1ji66RoqXR_jkbgfcbI56w/index.html#/inbox/to=BPr7vrFduuQqqVMu_tftxsScTKUq9ke0rx4q5C9ieQU", target="_blank") Contact/Donate
-      
-      div Icons made by 
-        a(href="https://www.flaticon.com/authors/smashicons", title="Smashicons", target="_blank") Smashicons 
-        | from 
-        a(href="https://www.flaticon.com/" title="Flaticon", target="_blank") www.flaticon.com
+      a(href="https://github.com/textury/permaweb-dropper", target="_blank") Open Source

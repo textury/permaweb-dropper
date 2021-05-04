@@ -1,0 +1,161 @@
+$background: #f1f2f4;
+$card: #fff4f4;
+$text: #4e4e4e;
+$text-light: #858484;
+$btn: #ff8f8f;
+$dropzone: #fff9f9;
+$radius: 5px;
+$card-ext-size: 48px;
+
+@import "fonts";
+
+body {
+  background: $background;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 500;
+  color: $text;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.button {
+    color: $dropzone;
+    border-radius: $radius;
+    background: $btn;
+    padding: 10px 50px;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.container-fluid {
+    padding-right: 5rem;
+    padding-left: 5rem;
+}
+.container, .container-fluid {
+    margin-right: auto;
+    margin-left: auto;
+}
+.wrap {
+    box-sizing: border-box;
+    max-width: 900px;
+    margin: 0 auto;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+.hero {
+    margin-top: 60px;
+}
+
+.card {
+    padding: 2% 5%;
+    border-radius: $radius;
+    background: $card;
+}
+
+h1 {
+    font-size: 1.5rem;
+}
+
+.description {
+    color: $text-light;
+    font-size: 0.9rem;
+}
+
+a {
+    color: $btn;
+}
+
+input[type="text"] {
+    padding: 10px;
+    width: 90%;
+}
+
+.dropzone {
+    border: 1px dashed $btn;
+    border-radius: $radius;
+    background: $dropzone;
+    position: relative;
+    padding: 10px;
+    text-align: center;
+    height: 100px;
+
+    #browse {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+        z-index: 999;
+    }
+}
+
+.tags, .card-footer {
+    display: none;
+}
+
+.card-ext {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    float: left;
+    margin-right: 10px;
+    text-align: center;
+    color: $dropzone;
+    background: $btn;
+    width: $card-ext-size;
+    height: $card-ext-size;
+    border-radius: $radius;
+    overflow: hidden;
+}
+
+.files-container {
+    .file {
+        margin: 20px 0;
+        position: relative;
+
+        .title {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .description {
+            color: lighten($text-light, 10%);
+            font-size: 0.8rem;
+        }
+
+        a {
+            font-size: 0.6rem;
+        }
+    }
+}
+
+.progress-ring {
+    width: 30px;
+    height: 30px;
+    .progress-ring__circle {
+        transition: 0.35s stroke-dashoffset;
+        transform: rotate(-90deg);
+        transform-origin: 50% 50%;
+    }
+}
+
+.card-footer {
+    margin: 50px 0 20px;
+    text-align: center;
+
+    .description {
+        font-size: 0.7rem;
+    }
+}
+
+footer {
+    text-align: center;
+    margin-top: 50px;
+}
