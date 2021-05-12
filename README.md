@@ -6,6 +6,7 @@ Permaweb Dropper is a simple webtool that allow users to upload (deploy) files t
 If you're planning to keep deploying data to Arweave, it is best to have `arkb` installed: https://github.com/textury/arkb
 
 ## ✨ Features:
+- Integration with ArConnect
 - No file size limit.
 - Works on any permaweb gateway.
 - Able to upload multiple files at once.
@@ -14,4 +15,4 @@ If you're planning to keep deploying data to Arweave, it is best to have `arkb` 
 - It doesn't store your wallet, your browser, nothing that could track you.
 
 Permaweb Dropper (last version) is available on the public gateway:
-- https://arweave.net/kWojTShmcWxKslPZvbIxGDBc1pL9LIOn8GjnPnHyRpE
+- https://arweave.net/7izfDARufPcQr0qNLYtVGaeZK1UlQM8B_2VFznNosMs
