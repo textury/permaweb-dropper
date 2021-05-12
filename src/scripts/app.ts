@@ -1,3 +1,5 @@
+import 'regenerator-runtime/runtime'
+
 import "flexboxgrid";
 import "../sass/main.scss";
 import $ from 'cash-dom';
@@ -10,7 +12,7 @@ const VERSION = '1.1.0';
 
 const arweave = Arweave.init({});
 let community: Community;
-let wallet: JWKInterface;
+let wallet: JWKInterface|'use_wallet';
 let address: string;
 let balance: string;
 let firstAddTags: boolean = true;
@@ -19,8 +21,28 @@ let tags: {name: string, value: string}[] = [];
 let totalSize = 0;
 let fee = 0;
 let total: string = '0';
+let isArConnect: boolean = false;
 
 $(document).ready(() => {
+  window.addEventListener("arweaveWalletLoaded", async () => {
+    try {
+      // @ts-ignore
+      address = await window.arweaveWallet.getActiveAddress();
+      isArConnect = true;
+      wallet = 'use_wallet';
+      updateDropZone();
+    } catch (e) {
+      console.log(e);
+    }
+  });
+  
+  window.addEventListener("walletSwitch", async (e) => {
+    isArConnect = true;
+    address = e.detail.address;
+    wallet = 'use_wallet';
+    updateDropZone();
+  });
+
   $('.tagName, .tagValue').val('');
 
   $('#browse').on('change', e => {
@@ -30,6 +52,35 @@ $(document).ready(() => {
     }
 
     addToDeploy(e);
+  });
+
+  $('body').on('click', '.arconnect', async e => {
+    e.preventDefault();
+
+    if(address && wallet) {
+      try {
+        // @ts-ignore
+        await window.arweaveWallet.disconnect();
+        window.location.reload();
+      } catch (e) {
+        console.log(e);
+      }
+    }
+
+    try {
+      // @ts-ignore
+      await window.arweaveWallet.connect(['ACCESS_ADDRESS', 'SIGN_TRANSACTION'], {
+        name: 'Permaweb Dropper'
+      });
+      isArConnect = true;
+      // @ts-ignore
+      address = await window.arweaveWallet.getActiveAddress();
+      wallet = 'use_wallet';
+      updateDropZone();
+    } catch (e) {
+      console.log(e);
+    }
+    
   });
 
   $('#deploy').on('click', async e => {
@@ -204,14 +255,7 @@ const doLogin = (e: any) => {
       // @ts-ignore
       wallet = JSON.parse(e.target.result);
       address = await arweave.wallets.jwkToAddress(wallet);
-      const bal = await arweave.wallets.getBalance(address);
-      balance = arweave.ar.winstonToAr(bal);
-
-      community = new Community(arweave, wallet);
-
-      const $dropzone = $('.dropzone');
-      $('.tags').show();
-      $dropzone.find('p').html('Drag and drop files here or <a href="#">browse for files</a>');
+      updateDropZone();
     } catch(e) {
       console.log(e);
       alert('Invalid wallet file!');
@@ -325,4 +369,18 @@ function ring() {
       "></circle>
     </svg>
   </div>`;
+}
+
+async function updateDropZone() {
+  const bal = await arweave.wallets.getBalance(address);
+  balance = arweave.ar.winstonToAr(bal);
+
+  const localWallet = (wallet === 'use_wallet')? await arweave.wallets.generate() : wallet;
+  community = new Community(arweave, localWallet);
+
+  const $dropzone = $('.dropzone');
+  $('.tags').show();
+  $dropzone.find('p').html('Drag and drop files here or <a href="#">browse for files</a>');
+
+  $('.connection').html(`Welcome back: <strong>${address}</strong> <a href="#" class="arconnect">Logout</a>`);
 }

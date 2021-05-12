@@ -6,8 +6,8 @@
     "last 2 versions"
   ],
   "scripts": {
-    "start": "parcel src/index.pug",
-    "build": "rimraf dist && parcel build src/index.pug --public-url ./ --no-source-maps"
+    "start": "parcel serve ./src/index.pug",
+    "build": "rimraf dist && parcel build ./src/index.pug --public-url ./ --no-source-maps"
   },
   "dependencies": {
     "@supercharge/promise-pool": "^1.7.0",
